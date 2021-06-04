@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>EyeTracking3D</title>
+		<style>
+			body { margin: 0; }
+
+            #video {
+                position: absolute;
+                top: 0;
+                left: 0;
+                z-index: 10;
+                background-color:rgba(0,0,0,0.5);
+            }
+            #canvas1 {
+                position: absolute;
+                top: 0;
+                left: 0;
+                z-index: 10;
+            }
+        </style>
+        <script defer src="/api/face-api.min.js"></script>
+        <script defer src="/src/face.js"></script>
+	</head>
+	<body>
+        <script src="/api/three.js"></script>
+        <!--<video id="video" width="720" height="560" autoplay muted></video>-->
+        <video id="video" width="288" height="224" autoplay muted></video> 
+
+        <canvas id="canvas1" width="720" height="560" ></canvas>
+        
+        <script>
+            const renderer = new THREE.WebGLRenderer( { antialias: true } );
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 1000 );
+            
+            let mesh;
+
+       </script>
+		<script type="module">
+
+			import { LightProbeGenerator } from '/api/jsm/lights/LightProbeGenerator.js';
+
+            
+			//let gui;
+
+			let lightProbe;
+			let directionalLight;
+
+			// linear color space
+			const API = {
+				lightProbeIntensity: 1.0,
+				directionalLightIntensity: 0.2,
+				envMapIntensity: 1
+			};
+
+			init();
+
+			function init() {
+
+				// renderer
+				//renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.body.appendChild( renderer.domElement );
+
+				// tone mapping
+				renderer.toneMapping = THREE.NoToneMapping;
+
+				renderer.outputEncoding = THREE.sRGBEncoding;
+
+				// scene
+				//scene = new THREE.Scene();
+
+				// camera
+				//camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 1000 );
+                let zaxis=36*2;
+                camera.position.set( 0, 0, zaxis);
+                camera.setFocalLength(zaxis);
+
+
+				// probe
+				lightProbe = new THREE.LightProbe();
+				scene.add( lightProbe );
+
+				// light
+				directionalLight = new THREE.DirectionalLight( 0xffffff, API.directionalLightIntensity );
+				directionalLight.position.set( 10, 10, 10 );
+				scene.add( directionalLight );
+
+				// envmap
+				const genCubeUrls = function ( prefix, postfix ) {
+
+					return [
+						prefix + 'px' + postfix, prefix + 'nx' + postfix,
+						prefix + 'py' + postfix, prefix + 'ny' + postfix,
+						prefix + 'pz' + postfix, prefix + 'nz' + postfix
+					];
+
+				};
+
+				const urls = genCubeUrls( '/static/textures/cube/Park3Med/', '.jpg' );
+
+				new THREE.CubeTextureLoader().load( urls, function ( cubeTexture ) {
+
+					cubeTexture.encoding = THREE.sRGBEncoding;
+
+					scene.background = cubeTexture;
+
+					lightProbe.copy( LightProbeGenerator.fromCubeTexture( cubeTexture ) );
+
+                    const geometry = new THREE.SphereGeometry( 4, 64, 32 );
+                    //const geometry = new THREE.BoxGeometry( 7,7,7);
+					//const geometry = new THREE.TorusKnotGeometry( 4, 1.5, 256, 32, 2, 3 );
+
+					const material = new THREE.MeshStandardMaterial( {
+						//color: 0xaaaaaa,
+						color: 0x888888,
+						metalness: 0.4,
+						roughness: 0,
+						envMap: cubeTexture,
+						envMapIntensity: API.envMapIntensity,
+					} );
+
+					// mesh
+					mesh = new THREE.Mesh( geometry, material );
+                    
+                    mesh.rotation.y += 3.14/8;
+                    mesh.rotation.x += 3.14/16;
+                        
+                    scene.add( mesh );
+                    
+					render();
+
+				} );
+
+
+				// listener
+				window.addEventListener( 'resize', onWindowResize );
+
+			}
+
+			function onWindowResize() {
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				render();
+
+			}
+
+			function render() {
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+	</body>
+</html>
